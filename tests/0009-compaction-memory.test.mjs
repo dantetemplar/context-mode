@@ -1280,14 +1280,26 @@ describe("ADR-0009 section 8: decision tag, timeline and cross-session ranking i
 
   test("[M4] GP5/timeline-offset-and-relevance-after-invalid-args", withRoot("cm-sd12-", async (root) => {
     const ctx = ctxAt(root, "s1");
-    const a = await ctxSearch.handler({ queries: [], sort: "timeline", offset: 0 }, ctx);
+    const a = await ctxSearch.handler({ queries: [], sort: "timeline", offset: C.SEARCH_PAGE_SIZE }, ctx);
     assert.equal(a.isError, true);
     assert.ok(a.text.startsWith("Invalid argument offset."), a.text);
-    const b = await ctxSearch.handler({ queries: ["x"], after: 0 }, ctx);
+    const b = await ctxSearch.handler({ queries: ["x"], after: 1 }, ctx);
     assert.equal(b.isError, true);
     assert.ok(b.text.startsWith("Invalid argument after."), b.text);
-    const c = await ctxSearch.handler({ queries: ["x"], sort: "relevance", after: 0, source: C.DECISION_SOURCE }, ctx);
+    const c = await ctxSearch.handler({ queries: ["x"], sort: "relevance", after: 1, source: C.DECISION_SOURCE }, ctx);
     assert.equal(c.isError, true);
+  }));
+
+  test("[M4] GP5/explicit-zero-is-not-paging: offset:0 and after:0 behave like an omitted field", withRoot("cm-sd12b-", async (root) => {
+    const ctx = ctxAt(root, "s1");
+    // 0 is the documented default page start; a client that fills it in must not be told
+    // to drop the field, in either mode.
+    const timeline = await ctxSearch.handler({ queries: [], sort: "timeline", after: 0, offset: 0 }, ctx);
+    assert.equal(timeline.isError, false);
+    assert.ok(!timeline.text.startsWith("Invalid argument"), timeline.text);
+    const relevance = await ctxSearch.handler({ queries: ["x"], offset: 0, after: 0 }, ctx);
+    assert.equal(relevance.isError, false);
+    assert.ok(!relevance.text.startsWith("Invalid argument"), relevance.text);
   }));
 
   // ---- cross-session ranking (§8.3, D4, #895; ADR-0009 §8.4 last case) ----

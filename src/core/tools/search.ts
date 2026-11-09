@@ -377,11 +377,15 @@ function answer(db: DbHandle, input: CtxSearchInput, scope: SearchScope, ctx: To
 
 async function handler(input: CtxSearchInput, ctx: ToolContext): Promise<ToolReply> {
   const sort = input.sort ?? "relevance";
-  // DECISIONS-r9 M23, ADR-0009 §8.1 rule 6.
-  if (sort === "timeline" && input.offset !== undefined) {
+  // DECISIONS-r9 M23, ADR-0009 §8.1 rule 6. An explicit 0 is the default page start,
+  // not a paging request, so a client that fills optional numbers with their default
+  // is not rejected as if it had paged; only a non-zero value is a mode conflict.
+  const offsetGiven = input.offset !== undefined && input.offset !== 0;
+  const afterGiven = input.after !== undefined && input.after !== 0;
+  if (sort === "timeline" && offsetGiven) {
     return invalid("offset", 'drop offset; page a timeline with "after"');
   }
-  if (sort === "relevance" && input.after !== undefined) {
+  if (sort === "relevance" && afterGiven) {
     return invalid("after", 'drop after, or pass sort:"timeline"');
   }
   const scope: SearchScope = input.scope ?? "worktree";
