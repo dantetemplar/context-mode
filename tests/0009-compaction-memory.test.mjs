@@ -844,6 +844,17 @@ describe("ADR-0009 section 6: ctx_resume delivery", { concurrency: CONC }, () =>
     assert.ok(out.text.includes("now: theirs ask"));
   }));
 
+  test("[M4] resume/blank-session-falls-back: session \"\" or \"  \" uses ctx.sessionId", () => withRoot(async (root) => {
+    const ctx = ctxFor(root, "s1");
+    const [seq] = await add(ctx, [["s1", { body: "hello" }]]);
+    for (const session of ["", "   "]) {
+      const state = await ctxResume.handler({ session }, ctx);
+      assert.deepEqual([state.isError, state.text.startsWith('<context_mode_state session="s1"')], [false, true]);
+      const row = await ctxResume.handler({ session, seq }, ctx);
+      assert.deepEqual([row.isError, row.text], [false, "hello"]);
+    }
+  }));
+
   test("[M4] resume/large-journal-bounded: 10,000 rows -> block <= RESUME_CAP", () => withRoot(async (root) => {
     const ctx = ctxFor(root);
     const rows = [];

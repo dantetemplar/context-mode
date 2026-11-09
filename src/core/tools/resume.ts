@@ -34,7 +34,10 @@ function reply(text: string, isError: boolean): ToolReply {
 
 async function handler(input: CtxResumeInput, ctx: ToolContext): Promise<ToolReply> {
   // Step 2: the server already resolved _meta.sessionId or "mcp:<serverId>" (D-M4-arch-3).
-  const sessionId = input.session ?? ctx.sessionId;
+  // A blank session field is "not given", not a session named "": `??` alone keeps "" and
+  // then fails the no-session check even though the caller has a live session.
+  const requestedSession = input.session?.trim() ?? "";
+  const sessionId = requestedSession !== "" ? requestedSession : ctx.sessionId;
   if (sessionId === "") return reply(RESUME_NO_SESSION_LINE, true);
 
   const db = await openDb(ctx.project, { readOnly: true }); // step 3
